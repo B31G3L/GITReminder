@@ -18,12 +18,13 @@
 import logging
 from conf_reader.reader import ConfReader
 from src.service.MainService import MainService
+from src.service.ConfigService import ConfigService
 
 if __name__ == "__main__":
     
-    ConfReader('assets/GITPuRe_ini.ini')
+    ConfReader('assets/GITPuRe.ini')
     log_filename = ConfReader.get('Log', 'Filename') 
-    logger = logging.getLogger('VCSReminder')
+    logger = logging.getLogger('GITReminder')
     hdlr = logging.FileHandler(log_filename, mode='w')
     formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
     hdlr.setFormatter(formatter)
@@ -38,10 +39,10 @@ if __name__ == "__main__":
     
     # 2 Erstelle Config File wenn nicht vorhanden
     logger.info(' 2 INI Config File')
-   # configService = ConfigService(logger)
-   # configService.initConf()
+    configService = ConfigService(logger)
+    configService.initConf()
 
     # 3 Start VCS REMINDER
-    logger.info(' 3 INI Start VCS Reminder')   
-    #mainService.start() 
+    logger.info(' 3 Start Git Push Reminder')   
+    mainService.start() 
   

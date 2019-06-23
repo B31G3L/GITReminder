@@ -22,7 +22,6 @@ class SysTrayService:
     def __init__(self, mainService, logger):
         pass
         self.logger = logger
-        self.logger.debug('Run : ini')
         self.app = None
         self.aboutUI = None
         self.settingUI = None
@@ -32,11 +31,11 @@ class SysTrayService:
     
     def start(self):
         # TODO notification anpassen (kein ToolTip)
-        self.logger.debug('Run: iniSystray')
-        menu_options = (("Settings", None, self.openSettings),("Restart", None, self.restart),("About", None, self.about),)
+        self.logger.info('SysTrayService =  Systray: Start')
+        menu_options = (("Status", None, self.status),("Restart", None, self.restart),("About", None, self.about),)
         self.systray = SysTrayIcon(CHECK_ICO, STATUS_OK, menu_options,  on_quit=self.on_quit_callback)
-        self.logger.debug('systray start')
         self.systray.start()
+        self.logger.info('SysTrayService =  Systray: OK ')
 
         
     def about(self, systray):
@@ -87,16 +86,11 @@ class SysTrayService:
             if self.aboutUI == None:
                 self.aboutUI = AboutUIService(self.logger)
     
+        
+    def status(self):
+        
+           pass
     
-    def iniSettingUI(self):
-        if self.app == None:
-            self.logger.debug('INI Application')
-            self.app = QtWidgets.QApplication(sys.argv)
-            self.logger.debug('set Style')
-            self.app.setStyle("Fusion")
-            self.logger.debug('set Palette')
-            self.app.setPalette(setPalette())
-        if self.settingUI == None:
-            self.settingUI = SettingsUIService(self.mainService, self.logger)
+    
 
     
