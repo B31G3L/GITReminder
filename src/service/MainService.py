@@ -19,17 +19,13 @@ STATUS_RUNNING = 'Git-Reminder Status: running'
 STATUS_CHANGE = 'Git-Reminder Status: Commit/Push erforderlich'
 STATUS_ERROR = 'Git-Reminder Status: {} Repos fehlerhaft'
 
-SYSTRAY_STATUS_OK = 'Git-Reminder Status: {} Repos'
-SYSTRAY_STATUS_DIRTY = 'Git-Reminder Status: {} to Commit/Push'
-SYSTRAY_STATUS_ERROR = 'Git-Reminder Status: {} invalid Repos'
-
 class MainService:
 
     
     def __init__(self, notificationService, gitService):
-        CHECK_ICO = StringService.getIcons('success')
-        ERROR_ICO = StringService.getIcons('error')
-        CHANGE_ICO = StringService.getIcons('warning')
+        self.CHECK_ICO = StringService.getIcons('success')
+        self.ERROR_ICO = StringService.getIcons('error')
+        self.CHANGE_ICO = StringService.getIcons('warning')
 
         self.notificationService = notificationService
         self.gitService = gitService
@@ -48,7 +44,7 @@ class MainService:
         
         try:
             menu_options = (
-                            (APP_NAME, CHECK_ICO, (
+                            (APP_NAME, self.CHECK_ICO, (
                                 ('Start', None, self.startGitReminderFromSystray),
                                 ('Stop', None, self.stopGitReminderFromSystray),
                                 ('Restart', None,  self.restartGitReminderFromSystray),
@@ -56,10 +52,10 @@ class MainService:
                             ("Status", None, self.status),
                             ("About", None, self.about),          
                             )
-            self.systray = SysTrayIcon(CHECK_ICO, STATUS_OK, menu_options,  on_quit=self.on_quit_callback)
+            self.systray = SysTrayIcon( self.CHECK_ICO, STATUS_OK, menu_options,  on_quit=self.on_quit_callback)
             self.systray.start()
         except:
-            self.notificationService.showToastNotification(APP_NAME, "Start: FAILED", ERROR_ICO)
+            self.notificationService.showToastNotification(APP_NAME, "Start: FAILED", self.ERROR_ICO)
             sys.exit()
     
     def startGitReminderFromSystray(self, systray):
@@ -67,7 +63,7 @@ class MainService:
 
     def startGitReminder(self):
         if self.isGitReminderStarted:
-            self.notificationService.showToastNotification(APP_NAME, "is already started", CHECK_ICO)
+            self.notificationService.showToastNotification(APP_NAME, "is already started", self.CHECK_ICO)
         else:
             configService = ConfigService(self.notificationService)
             self.noGitRepos = False
@@ -91,7 +87,7 @@ class MainService:
                     self.countStatusError += 1
                     self.updateSystrayInfo()
 
-            self.notificationService.showToastNotification(APP_NAME, "is started", CHECK_ICO)
+            self.notificationService.showToastNotification(APP_NAME, "is started", self.CHECK_ICO)
 
             self.isGitReminderStarted = True
 
@@ -122,13 +118,13 @@ class MainService:
 
     def stopGitReminder(self):
         if not self.isGitReminderStarted:
-            self.notificationService.showToastNotification(APP_NAME, "is already stopped", CHECK_ICO)
+            self.notificationService.showToastNotification(APP_NAME, "is already stopped", self.CHECK_ICO)
         else:
             self.isGitReminderStarted = False
             for x in  self.threads: 
                 x.join()
             self.threads = []
-            self.notificationService.showToastNotification(APP_NAME, "is stopped", CHECK_ICO)
+            self.notificationService.showToastNotification(APP_NAME, "is stopped", self.CHECK_ICO)
             self.systrayUpdate(CHECK_ICO, STATUS_NOT_RUNNING)
     
     def restartGitReminder(self):
@@ -140,25 +136,25 @@ class MainService:
         
     def status(self, systray):
         if self.isGitReminderStarted:
-            self.notificationService.showToastNotification(APP_NAME, "is started", CHECK_ICO)
+            self.notificationService.showToastNotification(APP_NAME, "is started", self.CHECK_ICO)
         else:
-            self.notificationService.showToastNotification(APP_NAME, "is stopped", CHECK_ICO)
+            self.notificationService.showToastNotification(APP_NAME, "is stopped", self.CHECK_ICO)
       
 
     def updateSystrayInfo(self):
         if self.countStatusError > 0:
-            self.systrayUpdate(ERROR_ICO, SYSTRAY_STATUS_ERROR.format(self.countStatusError))
+            self.systrayUpdate(self.ERROR_ICO, StringService.getMessages('systray_status_error').format(self.countStatusError))
         elif self.countStatusDirty > 0:
-            self.systrayUpdate(CHANGE_ICO, SYSTRAY_STATUS_DIRTY.format(self.countStatusDirty))
+            self.systrayUpdate(self.CHANGE_ICO, StringService.getMessages('systray_status_dirty').format(self.countStatusDirty))
         else:
-            self.systrayUpdate(CHECK_ICO, SYSTRAY_STATUS_OK.format(self.countStatusOk))
+            self.systrayUpdate(self.CHECK_ICO, StringService.getMessages('systray_status_ok').format(self.countStatusOk))
 
     def systrayUpdate(self, ico, status):
         self.systray._create_window
         self.systray.update(ico, status)
 
     def about(self, systray):
-        webbrowser.open("https://github.com/B31G3L/VCSReminder")
+        webbrowser.open(StringService.getMetaInfos('about'))
  
     def on_quit_callback(self, systray):
         pass

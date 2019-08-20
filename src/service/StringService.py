@@ -8,10 +8,11 @@ STRING_FILE = 'assets/Strings.ini'
 class StringService:
 
 
-    def getMetaInfos():
+    def getMetaInfos(metaInfo):
         config = configparser.ConfigParser()
         config.read(STRING_FILE)
-        return config['MetaInformations']
+        meta = config['MetaInformations']
+        return meta[metaInfo]
 
     def getIcons(icon):
         config = configparser.ConfigParser()
@@ -19,8 +20,9 @@ class StringService:
         icons = config['Icons']
         return icons[icon]
     
-    def getMessages():
+    def getMessages(message):
         config = configparser.ConfigParser()
         config.read(STRING_FILE)
-        return config['Messages']
+        messages = config['Messages']
+        return messages[message]
        
