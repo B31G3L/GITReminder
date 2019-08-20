@@ -6,11 +6,9 @@ verify_ssl = true
 [dev-packages]
 
 [packages]
-requests = "*"
+gitpython = "*"
 win10toast = "*"
-ini-config-reader = "*"
 infi-systray = "*"
-pyside2 = "*"
 
 [requires]
 python_version = "3.7"

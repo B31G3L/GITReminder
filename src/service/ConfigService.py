@@ -1,6 +1,5 @@
 import configparser
 import os
-import logging
 
 from src.object.profil import Profil
 
@@ -11,26 +10,27 @@ config = None
 PROJECTPATH = 'projectpath'
 REMINDERTIMEHOUR = 'remindertimehour'
 REMINDERTIMEMIN = 'remindertimemin'
-SELECTEDVCS = 'selectedvcs'
 SLEEPTIME = 'sleeptime'
 
 class ConfigService:
     
     
 
-    def __init__(self, logger):
-        self.logger = logger
+    def __init__(self, notificationService):
         self.config = configparser.ConfigParser()
+        self.notificationService = notificationService
+        if os.path.isfile('./' + CONFFILE):
+            pass
+            #self.logger.info('ConfigFile: {} exist.'.format(CONFFILE))
+        else:
+            #self.logger.info('ConfigFile: {} dont exist.'.format(CONFFILE))
+            self.notificationService.showToastNotification("GitReminder","ConfigFile: dont exist. Will be created","assets/img/bell_check.ico")
+            self.createDefaultConf()
 
     def reloadConfig(self):
         self.config = configparser.ConfigParser()
 
-    def initConf(self):
-        if os.path.isfile('./' + CONFFILE):
-            self.logger.info('ConfigFile: {} exist.'.format(CONFFILE))
-        else:
-            self.logger.info('ConfigFile: {} dont exist.'.format(CONFFILE))
-            self.createDefaultConf()
+
 
     def getSelections(self):
         self.config.read(CONFFILE)
@@ -41,7 +41,6 @@ class ConfigService:
         pp = ''
         rmh = 0
         rmm = 0
-        svcs = ''
         st = 0
         for (each_key, each_val) in self.config.items(selection):
             if(each_key == PROJECTPATH):
@@ -50,11 +49,9 @@ class ConfigService:
                     rmh = each_val
             if(each_key == REMINDERTIMEMIN):
                     rmm = each_val
-            if(each_key == SELECTEDVCS):
-                    svcs = each_val
             if(each_key == SLEEPTIME):
                     st = each_val
-        return Profil(selection, rmh, rmm, pp, svcs, st)
+        return Profil(selection, rmh, rmm, pp, st)
 
     def readConf(self):
         self.config.read(CONFFILE)
@@ -64,7 +61,6 @@ class ConfigService:
             pp = ''
             rmh = 0
             rmm = 0
-            svcs = ''
             st = 0
             for (each_key, each_val) in self.config.items(each_section):
                 if(each_key == PROJECTPATH):
@@ -73,23 +69,21 @@ class ConfigService:
                     rmh = each_val
                 if(each_key == REMINDERTIMEMIN):
                     rmm = each_val
-                if(each_key == SELECTEDVCS):
-                    svcs = each_val
                 if(each_key == SLEEPTIME):
                     st = each_val
-            profilList.append( Profil(each_section, rmh, rmm, pp, svcs, st))
+            profilList.append( Profil(each_section, rmh, rmm, pp, st))
         return profilList
         
     def createDefaultConf(self):
-        self.logger.info('ConfigFile = createDefaultConf: Start')
-        self.config['DefaultProject'] = {PROJECTPATH: 'C:\\', REMINDERTIMEHOUR: 0, REMINDERTIMEMIN: 0, SELECTEDVCS : 'Git', SLEEPTIME: 5}
+        #self.logger.info('ConfigFile = createDefaultConf: Start')
+        self.config['DefaultProject'] = {PROJECTPATH: 'C:\\', REMINDERTIMEHOUR: 0, REMINDERTIMEMIN: 0, SLEEPTIME: 5}
         self.config.write(open(CONFFILE, 'w'))
-        self.logger.info('ConfigFile = createDefaultConf: OK')
+        #self.logger.info('ConfigFile = createDefaultConf: OK')
 
     def createNewProfile(self, profileName):
         
         self.config.read(CONFFILE)
-        self.config[profileName] = {PROJECTPATH: 'C:\\', REMINDERTIMEHOUR: 0, REMINDERTIMEMIN: 0, SELECTEDVCS : 'Git', SLEEPTIME: 5}
+        self.config[profileName] = {PROJECTPATH: 'C:\\', REMINDERTIMEHOUR: 0, REMINDERTIMEMIN: 0, SLEEPTIME: 5}
         self.config.write(open(CONFFILE, 'w'))
 
     def deleteProfile(self, profileName):
@@ -100,6 +94,6 @@ class ConfigService:
     def saveProfile(self, profil):
         
         self.config.read(CONFFILE)
-        self.config[profil.name] = {PROJECTPATH: profil.projectPath, REMINDERTIMEHOUR: profil.reminderTimeHour, REMINDERTIMEMIN: profil.reminderTimeMin, SELECTEDVCS : profil.choosenVCS, SLEEPTIME: profil.sleeptime}
+        self.config[profil.name] = {PROJECTPATH: profil.projectPath, REMINDERTIMEHOUR: profil.reminderTimeHour, REMINDERTIMEMIN: profil.reminderTimeMin, SLEEPTIME: profil.sleeptime}
         self.config.write(open(CONFFILE, 'w'))
         return self.readConf()

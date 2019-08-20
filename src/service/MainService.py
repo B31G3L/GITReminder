@@ -1,50 +1,171 @@
+import sys
+import os
+import webbrowser
+import time
 
-from conf_reader.reader import ConfReader
-from src.service.SysTrayService import SysTrayService
-from src.service.NotificationService import NotificationService
-from src.service.ConfigService import ConfigService
 from threading import Thread
 
+from src.service.ConfigService import ConfigService
+from src.service.StringService import StringService
+from infi.systray import SysTrayIcon
+
+APP_NAME = 'GitReminder'
+
+
+
+STATUS_OK = 'Git-Reminder Status: ok'
+STATUS_NOT_RUNNING = 'Git-Reminder Status: not running'
+STATUS_RUNNING = 'Git-Reminder Status: running'
+STATUS_CHANGE = 'Git-Reminder Status: Commit/Push erforderlich'
+STATUS_ERROR = 'Git-Reminder Status: {} Repos fehlerhaft'
+
+SYSTRAY_STATUS_OK = 'Git-Reminder Status: {} Repos'
+SYSTRAY_STATUS_DIRTY = 'Git-Reminder Status: {} to Commit/Push'
+SYSTRAY_STATUS_ERROR = 'Git-Reminder Status: {} invalid Repos'
+
 class MainService:
-        
-    def __init__(self, logger):
-        self.logger = logger
-        self.sysTrayService = SysTrayService(self, logger)
-        self.sysTrayService.start()
-        self.configService = ConfigService(self.logger)
-        self.isRunning = False
+
+    
+    def __init__(self, notificationService, gitService):
+        CHECK_ICO = StringService.getIcons('success')
+        ERROR_ICO = StringService.getIcons('error')
+        CHANGE_ICO = StringService.getIcons('warning')
+
+        self.notificationService = notificationService
+        self.gitService = gitService
+        self.isGitReminderStarted = False
         self.threads = [] 
 
+        self.countStatusDirty = 0
+        self.countStatusError = 0
+        self.countStatusOk = 0
 
+        
 
-    def start(self):
-        self.logger.info('MainService:  start')
-        NotificationService.showToastNotification('GIT Push Reminder', 'Started', "assets/img/bell_check.ico")
-        self.logger.info('MainService:  load Config File == Start')
-        self.configService.reloadConfig()
-        self.logger.info('MainService:  load Config File == OK')
-        self.isRunning = True
-        self.logger.info('MainService:  getSelections == START')
-        selections = self.configService.getSelections()
-        self.logger.info('MainService:  getSelections == {} Selections found'.format(len(selections)))
-        self.logger.debug(' {} Threads found'.format(len(self.threads)))
-        for selection in selections:
-            thread = Thread(target=self.profileThreads, args=(selection,))
-            self.threads += [thread]
-            thread.start()
+    
+    def startSystray(self):
+        a = StringService.getIcons('success')
+        
+        try:
+            menu_options = (
+                            (APP_NAME, CHECK_ICO, (
+                                ('Start', None, self.startGitReminderFromSystray),
+                                ('Stop', None, self.stopGitReminderFromSystray),
+                                ('Restart', None,  self.restartGitReminderFromSystray),
+                            )),
+                            ("Status", None, self.status),
+                            ("About", None, self.about),          
+                            )
+            self.systray = SysTrayIcon(CHECK_ICO, STATUS_OK, menu_options,  on_quit=self.on_quit_callback)
+            self.systray.start()
+        except:
+            self.notificationService.showToastNotification(APP_NAME, "Start: FAILED", ERROR_ICO)
+            sys.exit()
+    
+    def startGitReminderFromSystray(self, systray):
+        self.startGitReminder()
 
+    def startGitReminder(self):
+        if self.isGitReminderStarted:
+            self.notificationService.showToastNotification(APP_NAME, "is already started", CHECK_ICO)
+        else:
+            configService = ConfigService(self.notificationService)
+            self.noGitRepos = False
+            self.dirtyGitRepos = False
 
-    def stop(self):
-        self.logger.debug('Stop is called')
-        self.isRunning = False
-        self.logger.debug(' {} Threads found to stop '.format(len(self.threads)))
-        for x in  self.threads: 
-            x.join()
-        self.threads = []
-        NotificationService.showToastNotification('GIT Push Reminder', 'Stopped', "assets/img/bell_check.ico")
+            self.countStatusDirty = 0
+            self.countStatusError = 0
+            self.countStatusOk = 0
 
+            for repo in configService.readConf():
+                if self.gitService.isGitRepo(repo):
+                    if self.gitService.isRepoDirty(repo):
+                       self.countStatusDirty += 1
+                       self.updateSystrayInfo()
+                       self.startThreadwithRepo(repo)
+                    else:
+                        self.countStatusOk += 1
+                        self.startThreadwithRepo(repo)
+                        self.updateSystrayInfo()
+                else:
+                    self.countStatusError += 1
+                    self.updateSystrayInfo()
 
-    def restart(self):
-        self.logger.debug('Restart is called')
-        self.stop()
-        self.start()
+            self.notificationService.showToastNotification(APP_NAME, "is started", CHECK_ICO)
+
+            self.isGitReminderStarted = True
+
+            
+            
+    def startThreadwithRepo(self, repo):
+        thread = Thread(target=self.profileThreads, args=(repo,))
+        self.threads += [thread]
+        thread.start()
+
+    def profileThreads(self, repo):
+        mins = int(repo.sleeptime) * 60
+        currentTime = 0
+        while self.isGitReminderStarted:
+            if currentTime == mins:
+                nowTime = datetime.now()
+                targetTime = datetime(nowTime.year, nowTime.month, nowTime.day, int(profile.reminderTimeHour), int(profile.reminderTimeMin))
+                if targetTime < nowTime:
+                    self.startCheckProfile(profile)
+                currentTime = 0
+
+            time.sleep(1)
+            currentTime += 1
+        
+    
+    def stopGitReminderFromSystray(self, systray):
+        self.stopGitReminder()
+
+    def stopGitReminder(self):
+        if not self.isGitReminderStarted:
+            self.notificationService.showToastNotification(APP_NAME, "is already stopped", CHECK_ICO)
+        else:
+            self.isGitReminderStarted = False
+            for x in  self.threads: 
+                x.join()
+            self.threads = []
+            self.notificationService.showToastNotification(APP_NAME, "is stopped", CHECK_ICO)
+            self.systrayUpdate(CHECK_ICO, STATUS_NOT_RUNNING)
+    
+    def restartGitReminder(self):
+        self.stopGitReminder()
+        self.startGitReminder()
+    
+    def restartGitReminderFromSystray(self, systray):
+        self.restartGitReminder()
+        
+    def status(self, systray):
+        if self.isGitReminderStarted:
+            self.notificationService.showToastNotification(APP_NAME, "is started", CHECK_ICO)
+        else:
+            self.notificationService.showToastNotification(APP_NAME, "is stopped", CHECK_ICO)
+      
+
+    def updateSystrayInfo(self):
+        if self.countStatusError > 0:
+            self.systrayUpdate(ERROR_ICO, SYSTRAY_STATUS_ERROR.format(self.countStatusError))
+        elif self.countStatusDirty > 0:
+            self.systrayUpdate(CHANGE_ICO, SYSTRAY_STATUS_DIRTY.format(self.countStatusDirty))
+        else:
+            self.systrayUpdate(CHECK_ICO, SYSTRAY_STATUS_OK.format(self.countStatusOk))
+
+    def systrayUpdate(self, ico, status):
+        self.systray._create_window
+        self.systray.update(ico, status)
+
+    def about(self, systray):
+        webbrowser.open("https://github.com/B31G3L/VCSReminder")
+ 
+    def on_quit_callback(self, systray):
+        pass
+    
+    
+       
+    
+    
+
+    

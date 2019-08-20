@@ -1,16 +1,18 @@
 from win10toast import ToastNotifier
+import time
 
 class NotificationService:
 
-    def __init__(self, logger):
+    def __init__(self):
         pass
-        self.logger = logger
-        self.logger.debug('Run : ini')
 
 
-    def showToastNotification(mainText, subText, iconPath):
+    def showToastNotification(self, mainText, subText, iconPath):
         toaster = ToastNotifier()
         toaster.show_toast(mainText, subText,
                         icon_path=iconPath,
                         duration=5,
                         threaded=True)
+                        
+        # Wait for threaded notification to finish
+        while toaster.notification_active(): time.sleep(0.3)
